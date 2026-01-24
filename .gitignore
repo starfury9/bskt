@@ -1,0 +1,21 @@
+# Secrets
+.env
+.env.*
+secrets.yaml
+**/secrets.yaml
+
+# Foundry
+out/
+broadcast/
+cache/
+
+# Node / CRE
+node_modules/
+tmp.wasm
+tmp.js
+
+# OS
+.DS_Store
+
+# basket-contracts deps
+basket-contracts/lib/

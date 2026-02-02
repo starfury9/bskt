@@ -8,6 +8,25 @@ export const POLICY_ENGINE_ADDRESS = (process.env.NEXT_PUBLIC_POLICY_ENGINE_ADDR
 export const MINT_API_URL =
   process.env.NEXT_PUBLIC_MINT_API_URL || "http://localhost:3001/api/mint";
 
+// Hardcoded basket addresses (from backend config)
+// These are the tokens the backend actually mints to
+export const HARDCODED_BASKETS = {
+  DUSD: {
+    stablecoinAddress: "0x6ab7121d7f6d660f6657f67bf5ef17b1cc09a3dd" as `0x${string}`,
+    mintingConsumerAddress: "0x4a261b116c8a54e6d3575c0b86733d634f0ba966" as `0x${string}`,
+    name: "Demo USD",
+    symbol: "DUSD",
+  },
+  AUDT: {
+    // Note: AUDT uses the same addresses as DUSD in the current backend config
+    // Update these when backend provides separate AUDT addresses
+    stablecoinAddress: "0x6ab7121d7f6d660f6657f67bf5ef17b1cc09a3dd" as `0x${string}`,
+    mintingConsumerAddress: "0x4a261b116c8a54e6d3575c0b86733d634f0ba966" as `0x${string}`,
+    name: "AUD Token",
+    symbol: "AUDT",
+  },
+};
+
 // BasketFactory ABI - only the functions we need
 export const BasketFactoryABI = [
   {

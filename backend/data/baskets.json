@@ -1,0 +1,8 @@
+{
+  "AUDT": {
+    "name": "Australian Dollar Token",
+    "symbol": "AUDT",
+    "stablecoinAddress": "0x61E66d95527bb5BFC4218ef07f9F3356F6c73226",
+    "mintingConsumerAddress": "0x0b843F6d065977F7BBf81Dda913D76742081A8c5"
+  }
+}

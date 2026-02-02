@@ -2,13 +2,13 @@
 
 import { useState } from "react";
 import { useAccount } from "wagmi";
-import { MINT_API_URL } from "@/config/contracts";
 
 export interface MintRequestResult {
   success: boolean;
   transactionId?: string;
   message?: string;
   error?: string;
+  data?: Record<string, unknown>;
 }
 
 export function useMintRequest() {
@@ -18,10 +18,9 @@ export function useMintRequest() {
   const [error, setError] = useState<string | null>(null);
 
   const requestMint = async (
-    stablecoinAddress: string,
-    mintingConsumerAddress: string,
     amount: string,
-    beneficiary?: string
+    beneficiary: string,
+    basket: string = "DUSD"
   ) => {
     if (!address) {
       setError("Wallet not connected");
@@ -33,32 +32,16 @@ export function useMintRequest() {
     setResult(null);
 
     try {
-      // Generate a unique bank reference
-      const bankReference = `BSKT${Date.now().toString(36).toUpperCase()}`;
       const beneficiaryAddress = beneficiary || address;
 
       const payload = {
-        messageType: "MT103",
-        transactionId: bankReference,
-        sender: {
-          name: "Basket User",
-          account: address,
-          bankCode: "BASKET",
-        },
-        beneficiary: {
-          name: "Stablecoin Recipient",
-          account: beneficiaryAddress,
-        },
+        beneficiary: beneficiaryAddress,
         amount: amount,
-        currency: "USD",
-        valueDate: new Date().toISOString().split("T")[0],
-        bankReference: bankReference,
-        // Additional metadata for the CRE workflow
-        stablecoinAddress,
-        mintingConsumerAddress,
+        basket: basket,
       };
 
-      const response = await fetch(MINT_API_URL, {
+      // Call the proxy API route (which forwards to real backend)
+      const response = await fetch("/api/mint", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -66,17 +49,17 @@ export function useMintRequest() {
         body: JSON.stringify(payload),
       });
 
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.error || `HTTP error! status: ${response.status}`);
-      }
-
       const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || `HTTP error! status: ${response.status}`);
+      }
 
       setResult({
         success: true,
-        transactionId: data.transactionId || bankReference,
-        message: data.message || "Mint request submitted successfully",
+        transactionId: data.transactionId,
+        message: data.message || `Mint request submitted for ${amount} ${basket}`,
+        data: data.data,
       });
 
       return data;

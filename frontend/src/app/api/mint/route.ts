@@ -1,22 +1,28 @@
 import { NextRequest, NextResponse } from "next/server";
 
+// Real backend API URL
+const BACKEND_URL = process.env.NEXT_PUBLIC_MINT_API_URL || 
+  "http://ec2-3-27-63-126.ap-southeast-2.compute.amazonaws.com:3001/mint";
+
+// API key (kept server-side for security)
+const API_KEY = process.env.MINT_API_KEY || "";
+
 /**
- * Mock API endpoint for triggering mint requests.
- * In production, this would trigger the CRE workflow.
- *
- * For hackathon demo:
- * - Accepts the mint request payload
- * - Returns a success response with transaction ID
- * - In real deployment, this would forward to the CRE HTTP trigger
+ * Proxy API endpoint for triggering mint requests.
+ * Forwards requests to the real CRE workflow backend on AWS.
+ * Keeps the API key server-side for security.
  */
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
 
-    // Validate required fields
-    const { beneficiary, amount, stablecoinAddress, mintingConsumerAddress } = body;
+    // Extract fields from frontend request
+    const beneficiaryAddress = body.beneficiary?.account || body.beneficiary;
+    const amount = body.amount;
+    const basket = body.basket || "DUSD"; // Default to DUSD
 
-    if (!beneficiary?.account) {
+    // Validate required fields
+    if (!beneficiaryAddress) {
       return NextResponse.json(
         { error: "Missing beneficiary address" },
         { status: 400 }
@@ -30,51 +36,46 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    if (!stablecoinAddress) {
+    console.log("Mint request - forwarding to backend:", {
+      beneficiary: beneficiaryAddress,
+      basket,
+      amount,
+    });
+
+    // Forward to real backend
+    const backendResponse = await fetch(BACKEND_URL, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "x-api-key": API_KEY,
+      },
+      body: JSON.stringify({
+        beneficiary: beneficiaryAddress,
+        basket: basket,
+        amount: amount.toString(),
+      }),
+    });
+
+    const backendData = await backendResponse.json();
+
+    if (!backendResponse.ok) {
+      console.error("Backend error:", backendData);
       return NextResponse.json(
-        { error: "Missing stablecoin address" },
-        { status: 400 }
+        {
+          error: backendData.error || "Backend request failed",
+          details: backendData,
+        },
+        { status: backendResponse.status }
       );
     }
 
-    // Generate transaction ID
-    const transactionId = body.transactionId || `BSKT${Date.now().toString(36).toUpperCase()}`;
-
-    console.log("Mint request received:", {
-      transactionId,
-      beneficiary: beneficiary.account,
-      amount,
-      stablecoinAddress,
-      mintingConsumerAddress,
-    });
-
-    // TODO: In production, forward this to the CRE workflow HTTP trigger
-    // const creResponse = await fetch(CRE_WORKFLOW_URL, {
-    //   method: 'POST',
-    //   headers: { 'Content-Type': 'application/json' },
-    //   body: JSON.stringify({
-    //     messageType: 'MT103',
-    //     transactionId,
-    //     beneficiary,
-    //     amount,
-    //     // ... other CRE payload fields
-    //   }),
-    // });
-
-    // For demo purposes, simulate success after a short delay
-    await new Promise((resolve) => setTimeout(resolve, 1000));
+    console.log("Backend response:", backendData);
 
     return NextResponse.json({
       success: true,
-      transactionId,
-      message: `Mint request submitted for ${amount} tokens to ${beneficiary.account}`,
-      note: "This is a demo endpoint. In production, this triggers the CRE workflow.",
-      payload: {
-        beneficiary: beneficiary.account,
-        amount,
-        stablecoinAddress,
-        mintingConsumerAddress,
-      },
+      message: `Mint request submitted for ${amount} ${basket} tokens`,
+      transactionId: backendData.transactionId || backendData.txHash,
+      data: backendData,
     });
   } catch (error) {
     console.error("Mint request error:", error);
@@ -90,10 +91,12 @@ export async function POST(request: NextRequest) {
 
 export async function GET() {
   return NextResponse.json({
-    service: "Basket Mint API",
+    service: "Basket Mint API Proxy",
     status: "healthy",
+    backend: BACKEND_URL,
     endpoints: {
-      "POST /api/mint": "Submit a mint request to trigger CRE workflow",
+      "POST /api/mint": "Submit a mint request to CRE workflow backend",
     },
+    supportedBaskets: ["AUDT", "DUSD"],
   });
 }

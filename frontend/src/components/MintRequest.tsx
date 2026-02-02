@@ -5,6 +5,12 @@ import { useAccount } from "wagmi";
 import { useMintRequest } from "@/hooks/useMintRequest";
 import { BasketCreatedResult } from "@/hooks/useBasketFactory";
 
+// Supported baskets from backend
+const SUPPORTED_BASKETS = [
+  { id: "DUSD", name: "Demo USD", symbol: "DUSD" },
+  { id: "AUDT", name: "AUD Token", symbol: "AUDT" },
+];
+
 interface MintRequestProps {
   basket: BasketCreatedResult | null;
   onMintComplete: () => void;
@@ -14,6 +20,7 @@ export function MintRequest({ basket, onMintComplete }: MintRequestProps) {
   const { address, isConnected } = useAccount();
   const [amount, setAmount] = useState("1000");
   const [beneficiary, setBeneficiary] = useState("");
+  const [selectedBasket, setSelectedBasket] = useState("DUSD");
 
   const { requestMint, isLoading, result, error, reset } = useMintRequest();
 
@@ -33,22 +40,21 @@ export function MintRequest({ basket, onMintComplete }: MintRequestProps) {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!basket || !amount || !beneficiary) return;
+    if (!amount || !beneficiary) return;
 
     await requestMint(
-      basket.stablecoinAddress,
-      basket.mintingConsumerAddress,
       amount,
-      beneficiary
+      beneficiary,
+      selectedBasket
     );
   };
 
-  const isDisabled = !isConnected || !basket;
+  const isDisabled = !isConnected;
 
   return (
     <div className={`card ${isDisabled ? "opacity-50" : ""}`}>
       <div className="flex items-center gap-3 mb-6">
-        <div className={`step-indicator ${basket ? "step-active" : "step-inactive"}`}>
+        <div className={`step-indicator ${isConnected ? "step-active" : "step-inactive"}`}>
           2
         </div>
         <div>
@@ -59,11 +65,11 @@ export function MintRequest({ basket, onMintComplete }: MintRequestProps) {
         </div>
       </div>
 
-      {!basket ? (
+      {!isConnected ? (
         <div className="bg-slate-900/50 rounded-lg p-8 text-center">
-          <p className="text-slate-400 mb-2">Create a basket first</p>
+          <p className="text-slate-400 mb-2">Connect wallet first</p>
           <p className="text-sm text-slate-500">
-            You need a stablecoin address to request minting
+            You need to connect your wallet to request minting
           </p>
         </div>
       ) : result?.success ? (
@@ -96,20 +102,30 @@ export function MintRequest({ basket, onMintComplete }: MintRequestProps) {
         </div>
       ) : (
         <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="bg-slate-900/30 rounded-lg p-3 mb-4">
-            <p className="text-xs text-slate-400 mb-1">Minting to:</p>
-            <p className="text-sm font-mono text-indigo-300 break-all">
-              {basket.stablecoinAddress}
-            </p>
-            <p className="text-xs text-slate-500 mt-1">
-              {basket.name} ({basket.symbol})
-            </p>
+          <div>
+            <label htmlFor="basket" className="label">
+              Select Basket
+              <span className="text-slate-500 font-normal ml-2">(supported tokens)</span>
+            </label>
+            <select
+              id="basket"
+              value={selectedBasket}
+              onChange={(e) => setSelectedBasket(e.target.value)}
+              className="input"
+              disabled={isLoading}
+            >
+              {SUPPORTED_BASKETS.map((b) => (
+                <option key={b.id} value={b.id}>
+                  {b.name} ({b.symbol})
+                </option>
+              ))}
+            </select>
           </div>
 
           <div>
             <label htmlFor="amount" className="label">
               Amount
-              <span className="text-slate-500 font-normal ml-2">(in {basket.symbol})</span>
+              <span className="text-slate-500 font-normal ml-2">(in {selectedBasket})</span>
             </label>
             <input
               id="amount"
@@ -151,16 +167,16 @@ export function MintRequest({ basket, onMintComplete }: MintRequestProps) {
             </div>
           )}
 
-          <div className="bg-amber-500/10 border border-amber-500/30 rounded-lg p-3">
+          <div className="bg-green-500/10 border border-green-500/30 rounded-lg p-3">
             <div className="flex items-start gap-2">
-              <svg className="w-5 h-5 text-amber-400 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+              <svg className="w-5 h-5 text-green-400 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
               </svg>
-              <div className="text-sm text-amber-200">
-                <p className="font-medium mb-1">Hackathon Mode</p>
-                <p className="text-amber-300/70 text-xs">
-                  This calls the backend API which triggers the CRE workflow.
-                  Make sure the backend is running at the configured URL.
+              <div className="text-sm text-green-200">
+                <p className="font-medium mb-1">Live Backend Connected</p>
+                <p className="text-green-300/70 text-xs">
+                  This calls the CRE workflow backend on AWS.
+                  Currently supports AUDT and DUSD baskets.
                 </p>
               </div>
             </div>

@@ -52,6 +52,12 @@ const payloadSchema = z.object({
 		destinationChain: z.string(),
 		beneficiary: z.string(),
 	}).optional(),
+	// Dynamic basket contract addresses (optional - falls back to config)
+	basket: z.object({
+		symbol: z.string(),
+		stablecoinAddress: z.string(),
+		mintingConsumerAddress: z.string(),
+	}).optional(),
 })
 
 type Payload = z.infer<typeof payloadSchema>
@@ -162,6 +168,7 @@ const validateProofOfReserve = (
 const mintWithACE = (
 	runtime: Runtime<Config>,
 	evmClient: cre.capabilities.EVMClient,
+	mintingConsumerAddress: string,
 	beneficiary: string,
 	mintRecipient: string,
 	amount: bigint,
@@ -215,7 +222,7 @@ const mintWithACE = (
 	//   5. If allowed → mint proceeds
 	const resp = evmClient
 		.writeReport(runtime, {
-			receiver: runtime.config.sepolia.mintingConsumerAddress,
+			receiver: mintingConsumerAddress,
 			report: reportResponse,
 			gasConfig: {
 				gasLimit: '500000',
@@ -380,6 +387,15 @@ const onHTTPTrigger = (runtime: Runtime<Config>, payload: HTTPPayload): object =
 		const beneficiary = parsedPayload.beneficiary.account
 		const hasCrossChain = parsedPayload.crossChain?.enabled === true
 
+		// Get minting consumer address from payload or fall back to config
+		const mintingConsumerAddress = parsedPayload.basket?.mintingConsumerAddress
+			|| runtime.config.sepolia.mintingConsumerAddress
+
+		runtime.log(`Using minting consumer: ${mintingConsumerAddress}`)
+		if (parsedPayload.basket) {
+			runtime.log(`Basket: ${parsedPayload.basket.symbol}`)
+		}
+
 		// ========================================
 		// STEP 1: Proof of Reserve Validation
 		// ========================================
@@ -409,8 +425,8 @@ const onHTTPTrigger = (runtime: Runtime<Config>, payload: HTTPPayload): object =
 		// Determine mint destination:
 		// - If CCIP enabled: mint to CCIP consumer (tokens staged for cross-chain transfer)
 		// - If CCIP disabled: mint to beneficiary (final destination)
-		const mintRecipient = hasCrossChain 
-			? runtime.config.sepolia.ccipConsumerAddress 
+		const mintRecipient = hasCrossChain
+			? runtime.config.sepolia.ccipConsumerAddress
 			: beneficiary
 		
 		runtime.log(`Mint destination: ${hasCrossChain ? 'CCIP Consumer (for cross-chain)' : 'Beneficiary (final)'}`)
@@ -421,6 +437,7 @@ const onHTTPTrigger = (runtime: Runtime<Config>, payload: HTTPPayload): object =
 			mintTxHash = mintWithACE(
 				runtime,
 				evmClient,
+				mintingConsumerAddress,
 				beneficiary, // ACE checks this for blacklist
 				mintRecipient, // Tokens minted here
 				amountWei,

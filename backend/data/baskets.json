@@ -1,0 +1,14 @@
+{
+  "AUDT": {
+    "name": "Australian Dollar Token",
+    "symbol": "AUDT",
+    "stablecoinAddress": "0x61E66d95527bb5BFC4218ef07f9F3356F6c73226",
+    "mintingConsumerAddress": "0x0b843F6d065977F7BBf81Dda913D76742081A8c5"
+  },
+  "DUSD": {
+    "name": "Demo USD",
+    "symbol": "DUSD",
+    "stablecoinAddress": "0x6ab7121d7f6d660f6657f67bf5ef17b1cc09a3dd",
+    "mintingConsumerAddress": "0x4a261b116c8a54e6d3575c0b86733d634f0ba966"
+  }
+}

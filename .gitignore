@@ -24,4 +24,7 @@ basket-contracts/lib/
 # Foundry (all nested)
 **/broadcast/
 **/cache/
+
+# backend hosting
 notes
+sync.sh

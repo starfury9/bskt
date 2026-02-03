@@ -3,6 +3,7 @@ import cors from 'cors';
 import dotenv from 'dotenv';
 import { join } from 'path';
 import { mintRouter } from './routes/mint.js';
+import { publishBasketRouter } from './routes/publish-basket.js';
 import { apiKeyAuth } from './middleware/auth.js';
 
 // Load .env from project root
@@ -17,6 +18,7 @@ app.use(express.json());
 
 // Routes (protected with API key)
 app.use('/mint', apiKeyAuth, mintRouter);
+app.use('/publish-basket', apiKeyAuth, publishBasketRouter);
 
 // Health check
 app.get('/health', (_req, res) => {
